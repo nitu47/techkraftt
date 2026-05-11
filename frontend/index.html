@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candidate Review Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 20px auto;
+            gap: 20px;
+            padding: 0 20px;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+
+        .content {
+            flex: 1;
+        }
+
+        .filter-group {
+            margin-bottom: 15px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .filter-group input, .filter-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        button:hover {
+            background: #5a67d8;
+        }
+
+        .candidates-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .candidate-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .candidate-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .candidate-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .candidate-role {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .status-pending { background: #ffc107; color: #333; }
+        .status-review { background: #17a2b8; color: white; }
+        .status-approved { background: #28a745; color: white; }
+        .status-rejected { background: #dc3545; color: white; }
+
+        .skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .skill-tag {
+            background: #e9ecef;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            overflow: auto;
+        }
+
+        .modal-content {
+            background: white;
+            margin: 50px auto;
+            padding: 20px;
+            width: 90%;
+            max-width: 600px;
+            border-radius: 10px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .close {
+            font-size: 28px;
+            cursor: pointer;
+        }
+
+        .score-form {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .score-list {
+            margin-top: 20px;
+        }
+
+        .score-item {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #666;
+        }
+
+        .error {
+            color: red;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Candidate Review Dashboard</h1>
+        <p>TechKraft Recruitment Tool</p>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <h3>Filters</h3>
+            <div class="filter-group">
+                <label>Status</label>
+                <select id="filter-status">
+                    <option value="">All</option>
+                    <option value="pending">Pending</option>
+                    <option value="review">In Review</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Role</label>
+                <input type="text" id="filter-role" placeholder="e.g., Software Engineer">
+            </div>
+            <div class="filter-group">
+                <label>Skill</label>
+                <input type="text" id="filter-skill" placeholder="e.g., Python">
+            </div>
+            <div class="filter-group">
+                <label>Search</label>
+                <input type="text" id="filter-keyword" placeholder="Name or email">
+            </div>
+            <button onclick="applyFilters()">Apply Filters</button>
+            <button onclick="resetFilters()" style="background: #6c757d; margin-top: 5px;">Reset</button>
+        </div>
+
+        <div class="content">
+            <div id="candidates-list" class="candidates-grid">
+                <div class="loading">Loading candidates...</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Candidate Details</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <script>
+        const API = 'http://127.0.0.1:8000';
+        let currentFilters = {};
+
+        // Load candidates on page load
+        window.onload = () => {
+            loadCandidates();
+        };
+
+        async function loadCandidates() {
+            const params = new URLSearchParams(currentFilters);
+            const url = `${API}/candidates?${params.toString()}`;
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Failed to load candidates');
+                
+                const candidates = await response.json();
+                displayCandidates(candidates);
+            } catch (error) {
+                document.getElementById('candidates-list').innerHTML = 
+                    `<div class="error">❌ Error loading candidates. Make sure backend is running on ${API}</div>`;
+                console.error('Error:', error);
+            }
+        }
+
+        function displayCandidates(candidates) {
+            const container = document.getElementById('candidates-list');
+            
+            if (!candidates || candidates.length === 0) {
+                container.innerHTML = '<div class="loading">No candidates found</div>';
+                return;
+            }
+
+            container.innerHTML = candidates.map(c => `
+                <div class="candidate-card" onclick="showCandidateDetails(${c.id})">
+                    <div class="candidate-name">${c.name}</div>
+                    <div class="candidate-role">${c.role_applied}</div>
+                    <div class="status-badge status-${c.status}">${c.status}</div>
+                    <div><small>📍 ${c.location} | 📅 ${c.experience_years} years</small></div>
+                    <div class="skills">
+                        ${c.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function showCandidateDetails(id) {
+            try {
+                const response = await fetch(`${API}/candidates/${id}`);
+                const candidate = await response.json();
+                
+                const modalBody = document.getElementById('modal-body');
+                document.getElementById('modal-title').textContent = candidate.name;
+                
+                modalBody.innerHTML = `
+                    <p><strong>Email:</strong> ${candidate.email}</p>
+                    <p><strong>Role:</strong> ${candidate.role_applied}</p>
+                    <p><strong>Status:</strong> <span class="status-badge status-${candidate.status}">${candidate.status}</span></p>
+                    <p><strong>Experience:</strong> ${candidate.experience_years} years</p>
+                    <p><strong>Location:</strong> ${candidate.location}</p>
+                    <p><strong>Skills:</strong> ${candidate.skills.join(', ')}</p>
+                    
+                    ${candidate.ai_summary ? `
+                        <div style="background: #e3f2fd; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                            <strong>🤖 AI Summary:</strong>
+                            <p>${candidate.ai_summary}</p>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="score-list">
+                        <h4>📊 Scores</h4>
+                        ${candidate.scores.length === 0 ? '<p>No scores yet</p>' : 
+                            candidate.scores.map(s => `
+                                <div class="score-item">
+                                    <strong>${s.category}:</strong> ${s.score}/5
+                                    ${s.note ? `<br><small>${s.note}</small>` : ''}
+                                    <br><small>By ${s.submitted_by} on ${new Date(s.submitted_at).toLocaleDateString()}</small>
+                                </div>
+                            `).join('')
+                        }
+                    </div>
+                    
+                    <div class="score-form">
+                        <h4>➕ Add Score</h4>
+                        <select id="score-category" style="width: 100%; padding: 8px; margin: 5px 0;">
+                            <option value="technical">Technical</option>
+                            <option value="communication">Communication</option>
+                            <option value="problem_solving">Problem Solving</option>
+                            <option value="leadership">Leadership</option>
+                        </select>
+                        <input type="number" id="score-value" placeholder="Score (1-5)" min="1" max="5" style="width: 100%; padding: 8px; margin: 5px 0;">
+                        <textarea id="score-note" placeholder="Note (optional)" style="width: 100%; padding: 8px; margin: 5px 0;"></textarea>
+                        <button onclick="submitScore(${id})">Submit Score</button>
+                        <button onclick="generateSummary(${id})" style="background: #28a745; margin-top: 5px;">Generate AI Summary</button>
+                    </div>
+                `;
+                
+                document.getElementById('modal').style.display = 'block';
+            } catch (error) {
+                alert('Error loading candidate details');
+                console.error(error);
+            }
+        }
+
+        async function submitScore(id) {
+            const category = document.getElementById('score-category').value;
+            const score = parseInt(document.getElementById('score-value').value);
+            const note = document.getElementById('score-note').value;
+            
+            if (!score || score < 1 || score > 5) {
+                alert('Please enter a valid score (1-5)');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API}/candidates/${id}/scores`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category, score, note })
+                });
+                
+                if (response.ok) {
+                    alert('Score submitted successfully!');
+                    closeModal();
+                    loadCandidates();
+                } else {
+                    alert('Error submitting score');
+                }
+            } catch (error) {
+                alert('Error submitting score');
+                console.error(error);
+            }
+        }
+
+        async function generateSummary(id) {
+            try {
+                const response = await fetch(`${API}/candidates/${id}/generate-summary`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    alert('AI Summary generated!');
+                    showCandidateDetails(id);
+                } else {
+                    alert('Error generating summary');
+                }
+            } catch (error) {
+                alert('Error generating summary');
+                console.error(error);
+            }
+        }
+
+        function applyFilters() {
+            currentFilters = {
+                status: document.getElementById('filter-status').value,
+                role_applied: document.getElementById('filter-role').value,
+                skill: document.getElementById('filter-skill').value,
+                keyword: document.getElementById('filter-keyword').value
+            };
+            // Remove empty filters
+            Object.keys(currentFilters).forEach(key => {
+                if (!currentFilters[key]) delete currentFilters[key];
+            });
+            loadCandidates();
+        }
+
+        function resetFilters() {
+            document.getElementById('filter-status').value = '';
+            document.getElementById('filter-role').value = '';
+            document.getElementById('filter-skill').value = '';
+            document.getElementById('filter-keyword').value = '';
+            currentFilters = {};
+            loadCandidates();
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('modal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
